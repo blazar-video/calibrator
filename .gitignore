@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Measurement artifacts
+*.mp4
+*.y4m
+*.png
+rd_curves/
+frames_dump/
