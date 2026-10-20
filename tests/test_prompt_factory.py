@@ -100,3 +100,40 @@ def test_judge_prompt_hides_the_scene_label():
         prompt = pf.judge_prompt(description, ["one prompt", "two prompt"])
         assert label not in prompt, (label, "leaked into the judge prompt")
         assert "one prompt" in prompt and "two prompt" in prompt
+
+
+def test_the_committed_prompt_set_matches_the_contract():
+    """The corpus is generated from these files, so their shape is a contract."""
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "prompts" / "v0"
+    for scene in pf.SCENES:
+        path = root / f"{scene}.txt"
+        assert path.exists(), f"missing prompt file for {scene}"
+        lines = [line.strip() for line in path.read_text().splitlines() if line.strip()]
+        assert len(lines) == 32, f"{scene}: {len(lines)} prompts, expected 32"
+        assert len(set(lines)) == len(lines), f"{scene}: duplicate prompts"
+        for line in lines:
+            words = line.split()
+            assert pf.MIN_WORDS <= len(words) <= pf.MAX_WORDS, f"{scene}: {len(words)} words: {line!r}"
+        assert (root / f"{scene}.judged.jsonl").exists(), f"{scene}: no judgement log"
+
+
+def test_every_committed_prompt_cleared_the_fit_floor():
+    import json
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "prompts" / "v0"
+    for scene in pf.SCENES:
+        chosen = {
+            line.strip()
+            for line in (root / f"{scene}.txt").read_text().splitlines()
+            if line.strip()
+        }
+        kept = [
+            json.loads(line)
+            for line in (root / f"{scene}.judged.jsonl").read_text().splitlines()
+            if json.loads(line)["text"] in chosen
+        ]
+        assert len(kept) == len(chosen), f"{scene}: a kept prompt has no judgement"
+        assert all(entry["fit"] >= pf.MIN_FIT for entry in kept), f"{scene}: kept a low-fit prompt"

@@ -238,7 +238,7 @@ def main(argv: list[str] | None = None) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out", default="/var/tmp/blazar/datasets/v0/prompts")
+    parser.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "prompts" / "v0"))
     parser.add_argument("--want", type=int, default=48, help="candidates to generate per scene")
     parser.add_argument("--keep", type=int, default=32, help="prompts to keep per scene")
     parser.add_argument("--model", default=None, help="kiro-cli model override")
