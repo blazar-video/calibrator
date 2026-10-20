@@ -117,5 +117,8 @@ def test_vmaf_scores_a_real_encode(tmp_path):
         workdir=tmp_path,
     )
     assert 0.0 < result.score <= 100.0
-    assert result.implementation in ("cpu", "cuda")
+    assert result.implementation in ("vmaf-cli", "ffmpeg-cpu", "ffmpeg-cuda")
     assert result.model.startswith("vmaf_v")
+    # Every score is taken after the inputs are normalised to limited-range
+    # yuv420p, because container range alone moves VMAF by whole points.
+    assert result.range_normalised is True
