@@ -262,8 +262,12 @@ def main(argv: list[str] | None = None) -> int:
         # One session per scene: kiro-cli turns take minutes, so running them in
         # parallel is the difference between one coffee and six.
         for scene in scenes:
+            # tmux starts a login shell, which may have neither `python` nor
+            # this working directory: be explicit about both.
+            root = Path(__file__).resolve().parent.parent
             command = (
-                f"python -m tools.prompt_factory --out {out} --want {args.want} "
+                f"cd {root} && PYTHONPATH={root} python3 -m tools.prompt_factory "
+                f"--out {out} --want {args.want} "
                 f"--keep {args.keep} --scene {scene}"
                 + (f" --model {args.model}" if args.model else "")
                 + f" 2>&1 | tee {out}/{scene}.log"
