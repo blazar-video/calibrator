@@ -3,6 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
+license = { text = "Apache-2.0" }
 name = "blazar-calibrator"
 version = "0.0.0"
 description = "Offline measurement pipeline that produces Blazar calibration files"

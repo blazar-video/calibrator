@@ -11,3 +11,7 @@ runtime is useful from day one without any calibrator output, which is why this
 can come later.
 
 See the `blazar` and `calibrations` repos for the runtime and the data contract.
+
+## License
+
+Apache-2.0. See `LICENSE`.
