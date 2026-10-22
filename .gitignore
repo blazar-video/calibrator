@@ -14,3 +14,5 @@ venv/
 *.png
 rd_curves/
 frames_dump/
+# macOS
+.DS_Store
