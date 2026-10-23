@@ -67,7 +67,10 @@ def write_lossless(path: Path, frames: np.ndarray, fps: float) -> None:
         "-r", str(fps), "-i", "-",
         # `gbrp`: planar RGB, 24 bpp. Letting ffmpeg choose picks `bgr0`
         # (32 bpp, padded), which is 33% larger for identical pixels.
-        "-c:v", "ffv1", "-level", "3", "-pix_fmt", "gbrp", str(path),
+        # A filter, not `-pix_fmt`: the encoder's format negotiation picks
+        # `bgr0` (32 bpp, padded) even when asked, which is 33% larger for
+        # identical pixels. `format=gbrp` pins planar 24 bpp RGB.
+        "-vf", "format=gbrp", "-c:v", "ffv1", "-level", "3", str(path),
     ]
     subprocess.run(command, input=frames.tobytes(), check=True)
     if not path.exists() or path.stat().st_size == 0:
