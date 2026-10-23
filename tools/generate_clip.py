@@ -65,11 +65,34 @@ def write_lossless(path: Path, frames: np.ndarray, fps: float) -> None:
         "ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "error",
         "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{width}x{height}",
         "-r", str(fps), "-i", "-",
-        "-c:v", "ffv1", "-level", "3", "-pix_fmt", "rgb24", str(path),
+        # `gbrp`: planar RGB, 24 bpp. Letting ffmpeg choose picks `bgr0`
+        # (32 bpp, padded), which is 33% larger for identical pixels.
+        "-c:v", "ffv1", "-level", "3", "-pix_fmt", "gbrp", str(path),
     ]
     subprocess.run(command, input=frames.tobytes(), check=True)
     if not path.exists() or path.stat().st_size == 0:
         raise SystemExit(f"encoder produced no data for {count} frames")
+
+
+def write_preview(path: Path, frames: np.ndarray, fps: float, crf: int = 20) -> None:
+    """H.264 for human inspection.
+
+    Not a master and not a calibration input: 4:2:0 and lossy, chosen so the clip
+    plays anywhere and stays small. The FFV1 file next to it is the one the
+    corpus keeps.
+    """
+    count, height, width, _ = frames.shape
+    path.parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        "ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "error",
+        "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{width}x{height}",
+        "-r", str(fps), "-i", "-",
+        "-c:v", "libx264", "-preset", "medium", "-crf", str(crf),
+        "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(path),
+    ]
+    subprocess.run(command, input=frames.tobytes(), check=True)
+    if not path.exists() or path.stat().st_size == 0:
+        raise SystemExit(f"preview encoder produced no data for {count} frames")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -78,6 +101,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model-revision", required=True)
     parser.add_argument("--prompt", required=True)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--preview", action=argparse.BooleanOptionalAction, default=True,
+                        help="also write a small lossy H.264 copy for inspection")
+    parser.add_argument("--preview-crf", type=int, default=20)
     parser.add_argument("--width", type=int, default=832)
     parser.add_argument("--height", type=int, default=480)
     parser.add_argument("--frames", type=int, default=81)
@@ -135,6 +161,9 @@ def main(argv: list[str] | None = None) -> int:
     torch.cuda.empty_cache()
 
     write_lossless(clip_path, frames, args.fps)
+    preview_path = clip_path.with_suffix(".preview.mp4")
+    if args.preview:
+        write_preview(preview_path, frames, args.fps, args.preview_crf)
     finished = time.perf_counter()
 
     clip = Clip(
@@ -155,6 +184,8 @@ def main(argv: list[str] | None = None) -> int:
     append_index(args.index, [clip])
 
     print(f"clip      : {clip_path} ({clip_path.stat().st_size / 1e6:.1f} MB, {frames.shape[0]} frames)")
+    if args.preview:
+        print(f"preview   : {preview_path} ({preview_path.stat().st_size / 1e6:.1f} MB)")
     print(f"key       : {key.short}")
     print(f"load      : {loaded - started:.1f} s")
     print(f"generate  : {generated - loaded:.1f} s ({frames.shape[0] / max(generated - loaded, 1e-9):.2f} fps)")
